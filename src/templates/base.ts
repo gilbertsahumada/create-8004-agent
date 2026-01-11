@@ -167,11 +167,12 @@ import { privateKeyToAccount } from 'viem/accounts';
 
 /**
  * ERC-8004 Identity Registry ABI (minimal)
- * The register() function mints an agent NFT with your tokenURI
+ * The register() function mints an agent NFT with your agentURI
+ * Updated Jan 2026: tokenURI -> agentURI
  */
 const IDENTITY_REGISTRY_ABI = parseAbi([
-  'function register(string tokenURI) external returns (uint256 agentId)',
-  'event Registered(uint256 indexed agentId, string tokenURI, address indexed owner)',
+  'function register(string agentURI) external returns (uint256 agentId)',
+  'event Registered(uint256 indexed agentId, string agentURI, address indexed owner)',
 ]);
 
 /**
