@@ -5,7 +5,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
 import { CHAINS, TRUST_MODELS } from "./config.js";
-import { SOLANA_CHAINS, isSolanaChain } from "./config-solana.js";
+import { isSolanaChain } from "./config-solana.js";
 function getAvailableDir(baseDir) {
     if (baseDir === ".")
         return baseDir;
@@ -38,13 +38,13 @@ export async function runWizard() {
             type: "input",
             name: "agentName",
             message: "Agent name:",
-            validate: (input) => input.length > 0 || "Agent name is required",
+            default: "my agent",
         },
         {
             type: "input",
             name: "agentDescription",
             message: "Agent description:",
-            validate: (input) => input.length > 0 || "Description is required",
+            default: "test agent created with create-8004-agent",
         },
         {
             type: "input",
@@ -57,16 +57,26 @@ export async function runWizard() {
             name: "chain",
             message: "Blockchain network:",
             choices: [
-                ...Object.entries(CHAINS).map(([key, chain]) => ({
-                    name: chain.name,
-                    value: key,
-                })),
-                new inquirer.Separator("── Solana ──"),
-                ...Object.entries(SOLANA_CHAINS).map(([key, chain]) => ({
-                    name: chain.name,
-                    value: key,
-                    disabled: "disabled" in chain && chain.disabled ? true : false,
-                })),
+                new inquirer.Separator("── Mainnets ──"),
+                ...Object.entries(CHAINS)
+                    .filter(([_, chain]) => !chain.name.includes("Testnet"))
+                    .map(([key, chain]) => {
+                    const displayName = chain.name.replace(" Mainnet", "");
+                    return {
+                        name: chain.x402Supported ? `${displayName} (x402 supported)` : displayName,
+                        value: key,
+                    };
+                }),
+                new inquirer.Separator("── Testnets ──"),
+                ...Object.entries(CHAINS)
+                    .filter(([_, chain]) => chain.name.includes("Testnet"))
+                    .map(([key, chain]) => {
+                    const displayName = chain.name.replace(" (Testnet)", "");
+                    return {
+                        name: chain.x402Supported ? `${displayName} (x402 supported)` : displayName,
+                        value: key,
+                    };
+                }),
             ],
         },
         {
@@ -89,13 +99,19 @@ export async function runWizard() {
             type: "checkbox",
             name: "features",
             message: "Select features to include:",
-            choices: () => {
+            choices: (ans) => {
+                // Check if selected chain supports x402
+                const selectedChain = ans.chain;
+                const chainConfig = selectedChain && !isSolanaChain(selectedChain)
+                    ? CHAINS[selectedChain]
+                    : null;
+                const x402Supported = chainConfig?.x402Supported ?? false;
                 return [
                     { name: "A2A Server (agent-to-agent communication)", value: "a2a", checked: true },
                     { name: "MCP Server (Model Context Protocol tools)", value: "mcp", checked: false },
-                    // x402 disabled: requires Base Sepolia, but 8004 registry is only on Eth Sepolia
-                    // Re-enable when 8004 deploys to Base or x402 supports Eth Sepolia
-                    { name: "x402 Payments (coming soon)", value: "x402", disabled: "Base Sepolia not yet supported" },
+                    x402Supported
+                        ? { name: "x402 Payments (USDC micropayments)", value: "x402", checked: false }
+                        : { name: "x402 Payments", value: "x402", disabled: "Not available on Ethereum" },
                 ];
             },
         },

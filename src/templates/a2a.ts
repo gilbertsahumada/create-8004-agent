@@ -10,9 +10,39 @@ function getX402Network(answers: WizardAnswers): string {
     return CHAINS[answers.chain as keyof typeof CHAINS].x402Network;
 }
 
+function getFacilitatorUrl(answers: WizardAnswers): string {
+    if (isSolanaChain(answers.chain)) {
+        // Solana uses PayAI facilitator
+        return "https://facilitator.payai.network";
+    }
+    const chainConfig = CHAINS[answers.chain as keyof typeof CHAINS];
+    return chainConfig.facilitatorUrl || "https://facilitator.payai.network";
+}
+
+interface UsdcConfig {
+    address: string;
+    name: string;
+    version: string;
+}
+
+function getUsdcConfig(answers: WizardAnswers): UsdcConfig | null {
+    if (isSolanaChain(answers.chain)) {
+        return null; // Solana handles USDC differently
+    }
+    const chainConfig = CHAINS[answers.chain as keyof typeof CHAINS];
+    if (!chainConfig.usdcAddress) return null;
+    return {
+        address: chainConfig.usdcAddress,
+        name: (chainConfig as any).usdcName || "USD Coin",
+        version: (chainConfig as any).usdcVersion || "2",
+    };
+}
+
 export function generateA2AServer(answers: WizardAnswers): string {
     const isSolana = isSolanaChain(answers.chain);
     const x402Network = hasFeature(answers, "x402") ? getX402Network(answers) : "";
+    const facilitatorUrl = hasFeature(answers, "x402") ? getFacilitatorUrl(answers) : "";
+    const usdcConfig = hasFeature(answers, "x402") ? getUsdcConfig(answers) : null;
 
     // x402 v2 imports - @x402/evm for EVM chains, @x402/svm for Solana
     const x402SchemePackage = isSolana ? "@x402/svm" : "@x402/evm";
@@ -27,21 +57,53 @@ import { ${x402SchemeClass} } from '${x402SchemePackage}/exact/server';`
         ? `import { streamResponse, type AgentMessage } from './agent.js';`
         : `import { generateResponse, type AgentMessage } from './agent.js';`;
 
+    // Determine which facilitator is being used for the comment
+    const facilitatorComment = "PayAI facilitator (Base, Polygon)";
+
+    // Generate custom USDC parser if needed (for networks without SDK defaults)
+    const customUsdcParser = usdcConfig
+        ? `
+// Custom USDC configuration for this network (not in SDK defaults)
+const USDC_ADDRESS = '${usdcConfig.address}';
+const USDC_NAME = '${usdcConfig.name}';
+const USDC_VERSION = '${usdcConfig.version}';
+const USDC_DECIMALS = 6;
+
+// Create scheme with custom USDC parser including EIP-712 domain params
+const evmScheme = new ${x402SchemeClass}();
+evmScheme.registerMoneyParser(async (amount) => {
+  // Convert dollar amount to USDC units (6 decimals)
+  const units = Math.floor(amount * Math.pow(10, USDC_DECIMALS));
+  return {
+    amount: units.toString(),
+    asset: USDC_ADDRESS,
+    extra: {
+      name: USDC_NAME,
+      version: USDC_VERSION,
+    },
+  };
+});
+`
+        : `
+// Create scheme (using SDK default USDC address)
+const evmScheme = new ${x402SchemeClass}();
+`;
+
     const x402Setup = hasFeature(answers, "x402")
         ? `
 // x402 v2 payment middleware - protects the /a2a endpoint
-// See: https://docs.cdp.coinbase.com/x402/quickstart-for-sellers
+// Facilitator: ${facilitatorComment}
 const PAYEE_ADDRESS = process.env.X402_PAYEE_ADDRESS || '${answers.agentWallet}';
 const X402_NETWORK = '${x402Network}'; // CAIP-2 ${isSolana ? "Solana" : "EVM"} network
 
-// Create facilitator client (testnet - change URL for mainnet)
+// Create facilitator client
 const facilitatorClient = new HTTPFacilitatorClient({
-  url: 'https://x402.org/facilitator', // Testnet facilitator
+  url: '${facilitatorUrl}',
 });
-
+${customUsdcParser}
 // Register ${isSolana ? "SVM" : "EVM"} scheme for payment verification
 const x402Server = new x402ResourceServer(facilitatorClient)
-  .register(X402_NETWORK, new ${x402SchemeClass}());
+  .register(X402_NETWORK, evmScheme);
 
 app.use(
   paymentMiddleware(

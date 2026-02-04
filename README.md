@@ -52,8 +52,8 @@ my-agent/
 | **A2A server**        | Enable agent-to-agent communication                                                                            |
 | **A2A streaming**     | Enable Server-Sent Events (SSE) for streaming responses                                                        |
 | **MCP server**        | Enable Model Context Protocol tools                                                                            |
-| **x402 payments**     | Coming soon (requires Base Sepolia support in 8004 registry) |
-| **Chain**             | EVM: Ethereum Sepolia (more chains coming soon) / Solana: Devnet                                               |
+| **x402 payments**     | [x402](https://x402.org) USDC micropayments (Base, Polygon)                                                    |
+| **Chain**             | EVM: Ethereum, Base, Polygon, Monad (mainnet + testnets) / Solana: Devnet                                      |
 | **Trust models**      | reputation, crypto-economic, tee-attestation                                                                   |
 
 ## Supported Chains
@@ -161,13 +161,21 @@ curl -X POST http://localhost:3000/a2a \
   }'
 ```
 
-## x402 Payments (Coming Soon)
+## x402 Payments
 
-[Coinbase x402](https://github.com/coinbase/x402) payment support is temporarily disabled. The x402 facilitator only supports Base Sepolia, while the ERC-8004 registry is currently deployed on Ethereum Sepolia.
+[x402](https://x402.org) payment support enables USDC micropayments for your agent. Available on:
 
-x402 will be re-enabled when:
-- ERC-8004 registry deploys to Base Sepolia, or
-- x402 facilitator adds Ethereum Sepolia support
+| Chain | Facilitator | Status |
+| ----- | ----------- | ------ |
+| Base Mainnet | [PayAI](https://payai.network) | ✅ Production |
+| Base Sepolia | PayAI | ✅ Testnet |
+| Polygon Mainnet | PayAI | ✅ Production |
+| Polygon Amoy | PayAI | ✅ Testnet |
+
+When enabled, the A2A server uses x402 middleware for micropayments:
+- Per-request pricing (default: $0.001 USDC)
+- Automatic payment verification via facilitator
+- Payment configuration in `.env`: `X402_PAYEE_ADDRESS`, `X402_PRICE`
 
 ## MCP Protocol
 
@@ -227,13 +235,37 @@ The server will communicate over stdin/stdout following the MCP protocol.
 }
 ```
 
+## Development
+
+### Running Tests
+
+```bash
+npm test
+```
+
+### x402 Paid Request Tests
+
+To run the full x402 integration tests (verifying paid requests work), you need a test wallet with testnet USDC:
+
+1. Create a `.env` file in the project root:
+```env
+TEST_PAYER_PRIVATE_KEY=0x...your_private_key...
+```
+
+2. Fund the wallet with testnet USDC on:
+   - Base Sepolia
+   - Polygon Amoy
+
+If `TEST_PAYER_PRIVATE_KEY` is not set, x402 paid request tests will be skipped (other tests still run).
+
 ## Resources
 
 -   [ERC-8004 Specification](https://eips.ethereum.org/EIPS/eip-8004)
 -   [8004scan Explorer](https://www.8004scan.io/) - View registered agents
 -   [A2A Protocol](https://a2a-protocol.org/)
 -   [Model Context Protocol](https://modelcontextprotocol.io/)
--   [Coinbase x402](https://github.com/coinbase/x402)
+-   [x402 Protocol](https://x402.org)
+-   [PayAI Facilitator](https://payai.network) - x402 facilitator for Base, Polygon
 -   [8004-solana SDK](https://github.com/8004-ai/8004-solana) - Solana implementation
 
 ## License

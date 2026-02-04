@@ -73,13 +73,13 @@ export async function runWizard(): Promise<WizardAnswers> {
             type: "input",
             name: "agentName",
             message: "Agent name:",
-            validate: (input: string) => input.length > 0 || "Agent name is required",
+            default: "my agent",
         },
         {
             type: "input",
             name: "agentDescription",
             message: "Agent description:",
-            validate: (input: string) => input.length > 0 || "Description is required",
+            default: "test agent created with create-8004-agent",
         },
         {
             type: "input",
@@ -92,16 +92,26 @@ export async function runWizard(): Promise<WizardAnswers> {
             name: "chain",
             message: "Blockchain network:",
             choices: [
-                ...Object.entries(CHAINS).map(([key, chain]) => ({
-                    name: chain.name,
-                    value: key,
-                })),
-                new inquirer.Separator("── Solana ──"),
-                ...Object.entries(SOLANA_CHAINS).map(([key, chain]) => ({
-                    name: chain.name,
-                    value: key,
-                    disabled: "disabled" in chain && chain.disabled ? true : false,
-                })),
+                new inquirer.Separator("── Mainnets ──"),
+                ...Object.entries(CHAINS)
+                    .filter(([_, chain]) => !chain.name.includes("Testnet"))
+                    .map(([key, chain]) => {
+                        const displayName = chain.name.replace(" Mainnet", "");
+                        return {
+                            name: chain.x402Supported ? `${displayName} (x402 supported)` : displayName,
+                            value: key,
+                        };
+                    }),
+                new inquirer.Separator("── Testnets ──"),
+                ...Object.entries(CHAINS)
+                    .filter(([_, chain]) => chain.name.includes("Testnet"))
+                    .map(([key, chain]) => {
+                        const displayName = chain.name.replace(" (Testnet)", "");
+                        return {
+                            name: chain.x402Supported ? `${displayName} (x402 supported)` : displayName,
+                            value: key,
+                        };
+                    }),
             ],
         },
         {
@@ -124,13 +134,20 @@ export async function runWizard(): Promise<WizardAnswers> {
             type: "checkbox",
             name: "features",
             message: "Select features to include:",
-            choices: () => {
+            choices: (ans: Partial<RawAnswers>) => {
+                // Check if selected chain supports x402
+                const selectedChain = ans.chain;
+                const chainConfig = selectedChain && !isSolanaChain(selectedChain) 
+                    ? CHAINS[selectedChain as ChainKey] 
+                    : null;
+                const x402Supported = chainConfig?.x402Supported ?? false;
+                
                 return [
                     { name: "A2A Server (agent-to-agent communication)", value: "a2a", checked: true },
                     { name: "MCP Server (Model Context Protocol tools)", value: "mcp", checked: false },
-                    // x402 disabled: requires Base Sepolia, but 8004 registry is only on Eth Sepolia
-                    // Re-enable when 8004 deploys to Base or x402 supports Eth Sepolia
-                    { name: "x402 Payments (coming soon)", value: "x402", disabled: "Base Sepolia not yet supported" },
+                    x402Supported
+                        ? { name: "x402 Payments (USDC micropayments)", value: "x402", checked: false }
+                        : { name: "x402 Payments", value: "x402", disabled: "Not available on Ethereum" },
                 ];
             },
         },

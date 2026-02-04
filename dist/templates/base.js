@@ -1,4 +1,30 @@
 import { hasFeature } from "../wizard.js";
+// Helper to get funding instructions based on chain
+function getFundingInstructions(chain) {
+    // Mainnets need real tokens
+    const mainnetChains = {
+        1: "ETH", // Ethereum
+        8453: "ETH", // Base
+        137: "MATIC", // Polygon
+        143: "MON", // Monad
+    };
+    if (mainnetChains[chain.chainId]) {
+        const token = mainnetChains[chain.chainId];
+        return `\n**⚠️ Mainnet: You need real ${token} for gas fees.** Transfer ${token} to your wallet before registering.\n`;
+    }
+    // Testnets have faucets
+    const faucets = {
+        11155111: "https://cloud.google.com/application/web3/faucet/ethereum/sepolia", // Eth Sepolia
+        84532: "https://www.coinbase.com/faucets/base-ethereum-goerli-faucet", // Base Sepolia
+        80002: "https://faucet.polygon.technology/", // Polygon Amoy
+        10143: "https://faucet.monad.xyz/", // Monad Testnet
+    };
+    const faucetUrl = faucets[chain.chainId];
+    if (faucetUrl) {
+        return `\nGet testnet tokens from: ${faucetUrl}\n`;
+    }
+    return "\nFund your wallet with native tokens for gas fees.\n";
+}
 export function generatePackageJson(answers) {
     const scripts = {
         build: "tsc",
@@ -85,7 +111,7 @@ export function generateRegisterScript(answers, chain) {
  * - Proper metadata format with registrations array
  * 
  * Requirements:
- * - PRIVATE_KEY in .env (wallet with testnet ETH for gas)
+ * - PRIVATE_KEY in .env (wallet with ETH for gas)
  * - PINATA_JWT in .env (for IPFS uploads)
  * - RPC_URL in .env (optional, defaults to public endpoint)
  * 
@@ -177,7 +203,8 @@ ${hasA2A
   console.log('   3. Set agent URI on-chain');
   console.log('');
 
-  const result = await agent.registerIPFS();
+  const txHandle = await agent.registerIPFS();
+  const { result } = await txHandle.waitMined();
 
   // Output results
   console.log('');
@@ -187,9 +214,9 @@ ${hasA2A
   console.log('📄 Agent URI:', result.agentURI);${chain.scanPath
         ? `
   console.log('');
-   console.log('🌐 View your agent on 8004scan:');
-   const agentIdNum = result.agentId?.split(':')[1] || result.agentId;
-   console.log(\`   https://www.8004scan.io/agents/${chain.scanPath}/\${agentIdNum}\`);`
+  console.log('🌐 View your agent on 8004scan:');
+  const agentIdNum = result.agentId?.split(':')[1] || result.agentId;
+  console.log(\`   https://www.8004scan.io/agents/${chain.scanPath}/\${agentIdNum}\`);`
         : ""}
   console.log('');
   console.log('📋 Next steps:');
@@ -359,8 +386,7 @@ OPENAI_API_KEY=your_openai_key
 ### 3. Fund your wallet
 
 Your agent wallet: \`${answers.agentWallet}\`
-
-Get testnet ETH from: https://cloud.google.com/application/web3/faucet/ethereum/sepolia
+${getFundingInstructions(chain)}
 
 ### 4. Register on-chain
 
