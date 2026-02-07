@@ -201,7 +201,7 @@ curl -X POST http://localhost:3000/a2a \
 
 | Chain | Facilitator | Status |
 | ----- | ----------- | ------ |
-| Base Mainnet | [PayAI](https://payai.network) | ✅ Production |
+| Base Mainnet | [PayAI](https://facilitator.payai.network) | ✅ Production |
 | Base Sepolia | PayAI | ✅ Testnet |
 | Polygon Mainnet | PayAI | ✅ Production |
 | Polygon Amoy | PayAI | ✅ Testnet |
