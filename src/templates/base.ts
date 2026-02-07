@@ -237,6 +237,13 @@ ${
   const txHandle = await agent.registerIPFS();
   const { result } = await txHandle.waitMined();
 
+  // Set agent wallet via ERC-8004 v2 setAgentWallet() (not deprecated metadata)
+  // This uses EIP-712 signature verification for security
+  console.log('');
+  console.log('🔐 Setting agent wallet via setAgentWallet()...');
+  const walletTx = await agent.setWallet('${answers.agentWallet}');
+  await walletTx.waitMined();
+
   // Output results
   console.log('');
   console.log('✅ Agent registered successfully!');
