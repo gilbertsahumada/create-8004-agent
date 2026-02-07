@@ -4,6 +4,24 @@ CLI tool to scaffold [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) complia
 
 **Supports both EVM chains and Solana.**
 
+## Table of Contents
+- [What is ERC-8004?](#what-is-erc-8004)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [What Gets Generated](#what-gets-generated)
+- [Wizard Options](#wizard-options)
+- [Supported Chains](#supported-chains)
+- [Generated Project Usage](#generated-project-usage)
+  - [1. Configure Environment](#1-configure-environment)
+  - [2. Register Agent On-Chain](#2-register-agent-on-chain)
+  - [3. Updating Your Agent](#3-updating-your-agent)
+  - [4. Start Your Servers](#4-start-your-servers)
+- [A2A, x402, and MCP Protocols](#a2a-protocol)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [Resources](#resources)
+
+
 ## What is ERC-8004?
 
 ERC-8004 is a protocol for discovering and trusting AI agents across organizational boundaries. It provides:
@@ -11,6 +29,12 @@ ERC-8004 is a protocol for discovering and trusting AI agents across organizatio
 -   **Identity Registry** - On-chain agent registration as NFTs
 -   **Reputation Registry** - Feedback and trust signals
 -   **Validation Registry** - Stake-secured verification
+## Prerequisites
+
+Before using the generator, ensure you have:
+- **Node.js**: Version 18.0.0 or higher.
+- **Package Manager**: npm, pnpm, or bun.
+- **Wallet**: An EVM or Solana wallet (the tool can generate one for you if needed).
 
 ## Quick Start
 
@@ -44,17 +68,17 @@ my-agent/
 
 | Option                | Description                                                                                                    |
 | --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Project directory** | Where to create the project                                                                                    |
-| **Agent name**        | Your agent's name                                                                                              |
-| **Agent description** | What your agent does                                                                                           |
-| **Agent image**       | URL to your agent's image/logo                                                                                 |
-| **Agent wallet**      | EVM or Solana address (leave empty to auto-generate)                                                           |
-| **A2A server**        | Enable agent-to-agent communication                                                                            |
-| **A2A streaming**     | Enable Server-Sent Events (SSE) for streaming responses                                                        |
-| **MCP server**        | Enable Model Context Protocol tools                                                                            |
-| **x402 payments**     | [x402](https://x402.org) USDC micropayments (Base, Polygon)                                                    |
-| **Chain**             | EVM: Ethereum, Base, Polygon, Monad (mainnet + testnets) / Solana: Devnet                                      |
-| **Trust models**      | reputation, crypto-economic, tee-attestation                                                                   |
+| **Project directory** | Where to create the project                                                                                                        |
+| **Agent name**        | Your agent's name                                                                                                           |
+| **Agent description** | What your agent does                                                                                                           |
+| **Agent image**       | URL to your agent's image/logo                                                                                                           |
+| **Agent wallet**      | EVM or Solana address (leave empty to auto-generate)                                                                                                 |
+| **A2A server**        | Enable agent-to-agent communication                                                                                                  |
+| **A2A streaming**     | Enable Server-Sent Events (SSE) for streaming responses                                                                                                      |
+| **MCP server**        | Enable Model Context Protocol tools                                                                                                          |
+| **x402 payments**     | [x402](https://x402.org) USDC micropayments (Base, Polygon)                                                                                                       |
+| **Chain**             | EVM: Ethereum, Base, Polygon, Monad (mainnet + testnets) / Solana: Devnet                                                                                                         |
+| **Trust models**      | reputation, crypto-economic, tee-attestation                                                                                                |
 
 ## Supported Chains
 
@@ -110,6 +134,16 @@ npm run register
 **Solana:** Validates metadata using `buildRegistrationFileJson()`, uploads to IPFS, and mints a Metaplex Core NFT via the 8004 program.
 
 After registration, view your agent on [8004scan.io](https://www.8004scan.io/).
+### 2(b). Updating Your Agent (Optional)
+
+If you update your agent's name, description, image, or [OASF](https://github.com/8004-org/oasf) skills in `src/register.ts`, you need to sync these changes on-chain:
+
+1. Update the configuration in `src/register.ts`.
+2. Run the registration script again:
+   ```bash
+   npm run register
+   ```
+This will upload the new metadata to IPFS and update your agent's URI on the Identity Registry.
 
 ### 3. Start Your Servers
 
